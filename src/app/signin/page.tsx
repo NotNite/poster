@@ -4,17 +4,19 @@ import * as bcrypt from "bcrypt";
 import { v4 as uuid } from "uuid";
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
+import { useUser } from "../components/useUser";
 
-export default function SignIn() {
+export default async function SignIn() {
+  const user = await useUser();
+  if (user != null) {
+    redirect("/posts");
+  }
+
   async function login(form: FormData) {
     "use server";
 
-    const formData = UserSchema.parse({
-      username: form.get("username"),
-      password: form.get("password")
-    });
+    const formData = UserSchema.parse(Object.fromEntries(form.entries()));
 
-    const hash = await bcrypt.hash(formData.password, 10);
     const user = await prisma.user.findFirst({
       where: {
         username: formData.username

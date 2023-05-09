@@ -1,8 +1,11 @@
+import GoBackButton from "@/app/components/GoBackButton";
+import { useUser } from "@/app/components/useUser";
 import prisma from "@/prisma";
 import { CreateCommentSchema } from "@/schema";
 import { User, Comment } from "@prisma/client";
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import postcss from "postcss";
+import postcssjs from "postcss-js";
 
 function CommentComponent({
   comment,
@@ -11,8 +14,16 @@ function CommentComponent({
   comment: Comment;
   author: User;
 }) {
+  // weak attempt at sandboxing css
+  // $5 on cashapp if you break this
+  let css = {};
+  if (comment.css != null) {
+    const root = postcss.parse(comment.css);
+    css = postcssjs.objectify(root);
+  }
+
   return (
-    <div>
+    <div style={css}>
       <b>
         {author.username}, at {comment.timestamp.toString()}, says:
       </b>
@@ -22,12 +33,7 @@ function CommentComponent({
 }
 
 export default async function Post({ params }: { params: { id: string } }) {
-  const authToken = cookies().get("token")?.value;
-  const me = await prisma.user.findFirst({
-    where: {
-      authToken: authToken
-    }
-  });
+  const me = await useUser();
 
   const post = await prisma.post.findUnique({
     where: {
@@ -54,13 +60,14 @@ export default async function Post({ params }: { params: { id: string } }) {
   async function submitComment(form: FormData) {
     "use server";
 
-    const formData = CreateCommentSchema.parse({
-      content: form.get("content")
-    });
+    const formData = CreateCommentSchema.parse(
+      Object.fromEntries(form.entries())
+    );
 
     await prisma.comment.create({
       data: {
         content: formData.content,
+        css: formData.css,
         postId: post!.id,
         authorId: me!.id
       }
@@ -76,6 +83,8 @@ export default async function Post({ params }: { params: { id: string } }) {
         by {author!.username} at {post.timestamp.toString()}
       </p>
 
+      <hr />
+
       <div>
         {post.comments.map((comment) => (
           <>
@@ -90,11 +99,19 @@ export default async function Post({ params }: { params: { id: string } }) {
       </div>
 
       {me != null && (
-        <form action={submitComment}>
-          <textarea name="content" placeholder="content" />
-          <button type="submit">post</button>
-        </form>
+        <>
+          <hr />
+          <form action={submitComment}>
+            <textarea name="content" placeholder="content" />
+            <br />
+            <textarea name="css" placeholder="css" />
+            <br />
+            <button type="submit">post</button>
+          </form>
+        </>
       )}
+
+      <GoBackButton />
     </main>
   );
 }

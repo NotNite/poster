@@ -1,3 +1,5 @@
+import GoBackButton from "@/app/components/GoBackButton";
+import { useUser } from "@/app/components/useUser";
 import prisma from "@/prisma";
 import { CreatePostSchema } from "@/schema";
 import { Post, User } from "@prisma/client";
@@ -13,20 +15,15 @@ function Post({ post, author }: { post: Post; author: User }) {
 }
 
 export default async function CreatePost() {
-  const authToken = cookies().get("token")?.value;
-  const me = await prisma.user.findFirst({
-    where: {
-      authToken: authToken
-    }
-  });
+  const me = await useUser();
+  if (me == null) {
+    redirect("/");
+  }
 
   async function createPost(form: FormData) {
     "use server";
 
-    const formData = CreatePostSchema.parse({
-      title: form.get("title"),
-      content: form.get("content")
-    });
+    const formData = CreatePostSchema.parse(Object.fromEntries(form.entries()));
 
     const post = await prisma.post.create({
       data: {
@@ -38,6 +35,7 @@ export default async function CreatePost() {
     const comment = await prisma.comment.create({
       data: {
         content: formData.content,
+        css: formData.css,
         postId: post.id,
         authorId: me!.id
       }
@@ -49,15 +47,17 @@ export default async function CreatePost() {
   return (
     <main>
       <h1>create</h1>
-      {me != null ? (
-        <form action={createPost}>
-          <input type="text" name="title" placeholder="title" />
-          <textarea name="content" placeholder="content" />
-          <button type="submit">create</button>
-        </form>
-      ) : (
-        <p>kill yourself</p>
-      )}
+      <form action={createPost}>
+        <input type="text" name="title" placeholder="title" />
+        <br />
+        <textarea name="content" placeholder="content" />
+        <br />
+        <textarea name="css" placeholder="css" />
+        <br />
+        <button type="submit">create</button>
+      </form>
+
+      <GoBackButton />
     </main>
   );
 }

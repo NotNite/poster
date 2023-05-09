@@ -17,6 +17,8 @@
     "eslint": "8.40.0",
     "eslint-config-next": "13.4.1",
     "next": "^13.4.2-canary.3",
+    "postcss": "^8.4.23",
+    "postcss-js": "^4.0.1",
     "react": "18.2.0",
     "react-dom": "18.2.0",
     "typescript": "5.0.4",
@@ -25,6 +27,7 @@
   },
   "devDependencies": {
     "@types/bcrypt": "^5.0.0",
+    "@types/postcss-js": "^4.0.1",
     "@types/uuid": "^9.0.1",
     "prisma": "^4.6.0"
   }
