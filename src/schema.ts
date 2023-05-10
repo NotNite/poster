@@ -8,10 +8,10 @@ export const UserSchema = z.object({
 export const CreatePostSchema = z.object({
   title: z.string().min(1),
   content: z.string().min(1),
-  css: z.string().min(1).optional()
+  css: z.string().optional()
 });
 
 export const CreateCommentSchema = z.object({
   content: z.string().min(1),
-  css: z.string().min(1).optional()
+  css: z.string().optional()
 });

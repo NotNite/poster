@@ -1,25 +1,36 @@
 import GoBackButton from "@/app/components/GoBackButton";
-import { useUser } from "@/app/components/useUser";
 import prisma from "@/prisma";
 import { CreateCommentSchema } from "@/schema";
+import { deleteComment, deletePost, getUser } from "@/utils";
 import { User, Comment } from "@prisma/client";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import postcss from "postcss";
 import postcssjs from "postcss-js";
 
 function CommentComponent({
   comment,
-  author
+  author,
+  loggedInUser
 }: {
   comment: Comment;
   author: User;
+  loggedInUser: User | null;
 }) {
   // weak attempt at sandboxing css
   // $5 on cashapp if you break this
   let css = {};
   if (comment.css != null) {
-    const root = postcss.parse(comment.css);
-    css = postcssjs.objectify(root);
+    try {
+      const root = postcss.parse(comment.css);
+      css = postcssjs.objectify(root);
+    } catch {}
+  }
+
+  async function deleteCommentAction() {
+    "use server";
+    await deleteComment(comment.id);
+    redirect(`/posts/${comment.postId}`);
   }
 
   return (
@@ -28,12 +39,18 @@ function CommentComponent({
         {author.username}, at {comment.timestamp.toString()}, says:
       </b>
       <p>{comment.content}</p>
+
+      {author.id === loggedInUser?.id && (
+        <form action={deleteCommentAction}>
+          <button>delete comment</button>
+        </form>
+      )}
     </div>
   );
 }
 
 export default async function Post({ params }: { params: { id: string } }) {
-  const me = await useUser();
+  const me = await getUser();
 
   const post = await prisma.post.findUnique({
     where: {
@@ -76,12 +93,23 @@ export default async function Post({ params }: { params: { id: string } }) {
     redirect(`/posts/${post!.id}`);
   }
 
+  async function deletePostAction() {
+    "use server";
+    await deletePost(post!.id);
+    redirect("/posts");
+  }
+
   return (
     <main>
       <h1>{post.title}</h1>
       <p>
         by {author!.username} at {post.timestamp.toString()}
       </p>
+      {me != null && me.id === author.id && (
+        <form action={deletePostAction}>
+          <button>delete post</button>
+        </form>
+      )}
 
       <hr />
 
@@ -92,6 +120,7 @@ export default async function Post({ params }: { params: { id: string } }) {
               key={comment.id}
               comment={comment}
               author={commentAuthors.find((a) => a.id === comment.authorId)!}
+              loggedInUser={me}
             />
             <br />
           </>

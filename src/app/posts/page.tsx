@@ -1,7 +1,8 @@
 import prisma from "@/prisma";
 import { Post, User } from "@prisma/client";
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import GoBackButton from "../components/GoBackButton";
+import { getUser } from "@/utils";
 
 function Post({ post, author }: { post: Post; author: User }) {
   return (
@@ -12,13 +13,7 @@ function Post({ post, author }: { post: Post; author: User }) {
 }
 
 export default async function Posts() {
-  const authToken = cookies().get("token")?.value;
-
-  const me = await prisma.user.findFirst({
-    where: {
-      authToken: authToken
-    }
-  });
+  const me = await getUser();
 
   const posts = await prisma.post.findMany({
     orderBy: {
@@ -39,11 +34,14 @@ export default async function Posts() {
       <h1>posts</h1>
       <div>
         {posts.map((post) => (
-          <Post
-            key={post.id}
-            post={post}
-            author={authors.find((a) => a.id === post.authorId)!}
-          />
+          <>
+            <Post
+              key={post.id}
+              post={post}
+              author={authors.find((a) => a.id === post.authorId)!}
+            />
+            <br />
+          </>
         ))}
       </div>
 
@@ -60,6 +58,8 @@ export default async function Posts() {
           </button>
         </form>
       )}
+
+      <GoBackButton />
     </main>
   );
 }
